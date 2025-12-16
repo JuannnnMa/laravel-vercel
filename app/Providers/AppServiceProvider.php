@@ -3,7 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
-
+use Illuminate\Support\Facades\URL;
 class AppServiceProvider extends ServiceProvider
 {
     /**
@@ -24,5 +24,9 @@ class AppServiceProvider extends ServiceProvider
             $view->with('globalAnios', \App\Models\AnioAcademico::orderBy('fecha_inicio', 'desc')->get());
             $view->with('globalAnioActual', anio_actual());
         });
+        
+        if (config('app.env') !== 'local') {
+            URL::forceScheme('https');
+        }
     }
 }
