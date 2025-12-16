@@ -1,0 +1,1193 @@
+@extends('layouts.admin-layout')
+
+@section('title', 'Estudiantes')
+@section('page-title', 'Gestión de Estudiantes')
+
+@section('content')
+<!-- Filters -->
+<div class="filters">
+    <form method="GET" action="{{ route('admin.estudiantes') }}" style="display: flex; gap: 15px; width: 100%;">
+        <div class="form-group">
+            <label>Curso</label>
+            <select name="grado_id" onchange="this.form.submit()">
+                <option value="">Todos los cursos</option>
+                @foreach($grados as $grado)
+                    <option value="{{ $grado->id_grado }}" {{ request('grado_id') == $grado->id_grado ? 'selected' : '' }}>
+                        {{ $grado->nombre }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label>Paralelo</label>
+            <select name="seccion_id" onchange="this.form.submit()">
+                <option value="">Todos los paralelos</option>
+                @foreach($secciones as $seccion)
+                    <option value="{{ $seccion->id_seccion }}" {{ request('seccion_id') == $seccion->id_seccion ? 'selected' : '' }}>
+                        {{ $seccion->nombre }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label>&nbsp;</label>
+            <button type="submit" name="sin_inscribir" value="1" class="btn btn-secondary">
+                Estudiantes sin inscribir
+            </button>
+        </div>
+    </form>
+</div>
+
+<div class="table-container">
+    <div class="table-header">
+        <h2>Lista de Estudiantes</h2>
+        <button 
+  style="
+    background-color: #333;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s;"
+  onclick="openModal('createEstudianteModal')"
+>
+  <i class='fas fa-plus'></i> Nuevo Estudiante
+</button>
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Nombre Completo</th>
+                <th>CI</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse($estudiantes as $estudiante)   
+            <tr>
+                <td>{{ $estudiante->codigo_estudiante }}</td>
+                <td>{{ $estudiante->nombreCompleto() }}</td>
+                <td>{{ $estudiante->ci }}</td>
+                
+                <td>
+                    @if($estudiante->estado == true)
+                        <span class="badge badge-success">Activo</span>
+                    @else
+                        <span class="badge badge-danger">Retirado</span>
+                    @endif
+                </td>
+                <td>
+                    <div class="actions">
+                        
+                        
+                        @if($estudiante->estado == true)
+                            <button class="btn btn-info" onclick="showNotas({{ $estudiante->id_estudiante }})" title="Ver Notas">
+                                <i class="fas fa-clipboard-list"></i>
+                            </button>
+                            
+                            <button class="btn btn-success" onclick="showAsistencia({{ $estudiante->id_estudiante }})" title="Ver Asistencia">
+                                <i class="fas fa-calendar-check"></i>
+                            </button>
+                            
+                            <button class="btn btn-warning" onclick="editEstudiante({{ $estudiante->id_estudiante }})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            
+                            
+                            
+                            <form action="{{ route('admin.estudiantes.destroy', $estudiante->id_estudiante) }}" method="POST" style="display: inline;">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-danger" onclick="return confirm('¿Desactivar este estudiante?')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        @else
+                            <form action="{{ route('admin.estudiantes.activate', $estudiante->id_estudiante) }}" method="POST" style="display: inline;">
+                                @csrf
+                                <button type="submit" class="btn btn-success">Activar</button>
+                            </form>
+                        @endif
+                    </div>
+                </td>
+            </tr>
+            @empty
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 40px; color: #666;">
+                    No hay estudiantes registrados
+                </td>
+            </tr>
+            @endforelse
+        </tbody>
+    </table>
+    
+    <div style="padding: 20px;">
+        {{ $estudiantes->links() }}
+    </div>
+</div>
+
+<!-- Create Modal -->
+<div id="createEstudianteModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Nuevo Estudiante</h3>
+            <button class="modal-close" onclick="closeModal('createEstudianteModal')">&times;</button>
+        </div>
+        <form action="{{ route('admin.estudiantes.store') }}" method="POST">
+            @csrf
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Código Estudiante *</label>
+                        <input type="text" name="codigo_estudiante" required>
+                    </div>
+                    <div class="form-group">
+                        <label>CI *</label>
+                        <input type="text" name="ci" required maxlength="15">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nombres *</label>
+                        <input type="text" name="nombres" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Apellido Paterno *</label>
+                        <input type="text" name="apellido_paterno" required>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Apellido Materno</label>
+                        <input type="text" name="apellido_materno">
+                    </div>
+                    <div class="form-group">
+                        <label>Fecha de Nacimiento</label>
+                        <input type="date" name="fecha_nacimiento">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Género *</label>
+                        <select name="genero" required>
+                            <option value="">Seleccionar</option>
+                            <option value="M">Masculino</option>
+                            <option value="F">Femenino</option>
+                            <option value="O">Otro</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Teléfono</label>
+                        <input type="text" name="telefono">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Estado *</label>
+                        <select name="estado" required>
+                            <option value="1">Activo</option>
+                            <option value="0">Inactivo</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Dirección</label>
+                    <textarea name="direccion" rows="3"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>Nombre del Tutor</label>
+                    <input type="text" name="nombre_tutor">
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Teléfono del Tutor</label>
+                        <input type="text" name="telefono_tutor">
+                    </div>
+                    <div class="form-group">
+                        <label>Parentesco del Tutor</label>
+                        <input type="text" name="parentesco_tutor">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('createEstudianteModal')">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div id="editEstudianteModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Editar Estudiante</h3>
+            <button class="modal-close" onclick="closeModal('editEstudianteModal')">&times;</button>
+        </div>
+        <form id="editEstudianteForm" method="POST">
+            @csrf
+            @method('PUT')
+            <div class="modal-body" id="editEstudianteContent">
+                <!-- El contenido se cargará dinámicamente -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('editEstudianteModal')">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Actualizar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Inscripción Modal -->
+<div id="inscripcionModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Inscribir Estudiante</h3>
+            <button class="modal-close" onclick="closeModal('inscripcionModal')">&times;</button>
+        </div>
+        <div class="modal-body" id="inscripcionContent">
+            <!-- El contenido se cargará dinámicamente -->
+        </div>
+    </div>
+</div>
+
+<!-- Notas Modal -->
+<div id="notasModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Notas del Estudiante</h3>
+            <button class="modal-close" onclick="closeModal('notasModal')">&times;</button>
+        </div>
+        <div class="modal-body" id="notasContent">
+            <!-- El contenido se cargará dinámicamente -->
+        </div>
+    </div>
+</div>
+
+<!-- Asistencia Modal -->
+<div id="asistenciaModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Asistencia del Estudiante</h3>
+            <button class="modal-close" onclick="closeModal('asistenciaModal')">&times;</button>
+        </div>
+        <div class="modal-body" id="asistenciaContent">
+            <!-- El contenido se cargará dinámicamente -->
+        </div>
+    </div>
+</div>
+@endsection
+
+@push('styles')
+<style>
+/* Estilos para los modales */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    overflow: auto;
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 5% auto;
+    padding: 0;
+    border-radius: 8px;
+    width: 600px;
+    max-width: 90%;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-header {
+    padding: 20px;
+    border-bottom: 1px solid #e5e5e5;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #f8f9fa;
+    border-radius: 8px 8px 0 0;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #333;
+    font-size: 1.5rem;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 28px;
+    cursor: pointer;
+    color: #666;
+    line-height: 1;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-close:hover {
+    color: #000;
+    background-color: #e9ecef;
+    border-radius: 4px;
+}
+
+.modal-body {
+    padding: 25px 20px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.modal-footer {
+    padding: 20px;
+    border-top: 1px solid #e5e5e5;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    background-color: #f8f9fa;
+    border-radius: 0 0 8px 8px;
+}
+
+/* Estilos para formularios */
+.form-row {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.form-row .form-group {
+    flex: 1;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #333;
+    font-size: 14px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    box-sizing: border-box;
+    transition: all 0.3s ease;
+    background-color: #fff;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+/* Estilos para botones */
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    transition: all 0.3s ease;
+    min-height: 40px;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.btn-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #545b62;
+}
+
+.btn-warning {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.btn-warning:hover {
+    background-color: #e0a800;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    color: white;
+}
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.badge-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f1b0b7;
+}
+
+.badge-warning {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+/* Estilos para la tabla y filtros */
+.filters {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.table-container {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+
+.table-header {
+    padding: 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e9ecef;
+    background-color: #f8f9fa;
+}
+
+.table-header h2 {
+    margin: 0;
+    color: #333;
+    font-size: 1.75rem;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: white;
+}
+
+th, td {
+    padding: 15px 20px;
+    text-align: left;
+    border-bottom: 1px solid #e9ecef;
+}
+
+th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    color: #495057;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+tbody tr {
+    transition: background-color 0.3s ease;
+}
+
+tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.actions form {
+    margin: 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .modal-content {
+        width: 95%;
+        margin: 10% auto;
+    }
+    
+    .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+    
+    .table-header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: stretch;
+    }
+    
+    .actions {
+        flex-direction: column;
+    }
+    
+    .actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .filters form {
+        flex-direction: column;
+    }
+}
+</style>
+@endpush
+
+@push('scripts')
+<script>
+// Get csrfToken from the meta tag
+const getCsrfToken = () => {
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+};
+
+// Funciones para abrir/cerrar modales
+function openModal(modalId) {
+    document.getElementById(modalId).style.display = 'block';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
+    document.body.style.overflow = 'auto';
+}
+
+// Cerrar modal al hacer clic fuera del contenido
+window.onclick = function(event) {
+    const modals = document.querySelectorAll('.modal');
+    modals.forEach(modal => {
+        if (event.target === modal) {
+            closeModal(modal.id);
+        }
+    });
+}
+
+// Cerrar modal con tecla ESC
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(modal => {
+            if (modal.style.display === 'block') {
+                closeModal(modal.id);
+            }
+        });
+    }
+});
+
+function editEstudiante(id) {
+    console.log('Editando estudiante ID:', id);
+    
+    // Mostrar loading
+    document.getElementById('editEstudianteContent').innerHTML = `
+        <div style="text-align: center; padding: 40px;">
+            <div style="color: #666; font-size: 16px;">Cargando datos del estudiante...</div>
+        </div>
+    `;
+    openModal('editEstudianteModal');
+    
+    fetch(`/admin/estudiantes/${id}/edit`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error al cargar los datos del estudiante');
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Datos recibidos:', data);
+            
+            document.getElementById('editEstudianteForm').action = `/admin/estudiantes/${id}`;
+            document.getElementById('editEstudianteContent').innerHTML = `
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Código Estudiante *</label>
+                        <input type="text" name="codigo_estudiante" value="${data.codigo_estudiante || ''}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>CI *</label>
+                        <input type="text" name="ci" value="${data.ci || ''}" required maxlength="15">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nombres *</label>
+                        <input type="text" name="nombres" value="${data.nombres || ''}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Apellido Paterno *</label>
+                        <input type="text" name="apellido_paterno" value="${data.apellido_paterno || ''}" required>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Apellido Materno</label>
+                        <input type="text" name="apellido_materno" value="${data.apellido_materno || ''}">
+                    </div>
+                    <div class="form-group">
+                        <label>Fecha de Nacimiento</label>
+                        <input type="date" name="fecha_nacimiento" value="${data.fecha_nacimiento || ''}">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Género *</label>
+                        <select name="genero" required>
+                            <option value="M" ${data.genero == 'M' ? 'selected' : ''}>Masculino</option>
+                            <option value="F" ${data.genero == 'F' ? 'selected' : ''}>Femenino</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Teléfono</label>
+                        <input type="text" name="telefono" value="${data.telefono || ''}">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Estado *</label>
+                        <select name="estado" required>
+                            <option value="1" ${data.estado == 1 ? 'selected' : ''}>Activo</option>
+                            <option value="0" ${data.estado == 0 ? 'selected' : ''}>Inactivo</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Dirección</label>
+                    <textarea name="direccion" rows="3">${data.direccion || ''}</textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>Nombre del Tutor</label>
+                    <input type="text" name="nombre_tutor" value="${data.nombre_tutor || ''}">
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Teléfono del Tutor</label>
+                        <input type="text" name="telefono_tutor" value="${data.telefono_tutor || ''}">
+                    </div>
+                    <div class="form-group">
+                        <label>Parentesco del Tutor</label>
+                        <input type="text" name="parentesco_tutor" value="${data.parentesco_tutor || ''}">
+                    </div>
+                </div>
+            `;
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('editEstudianteContent').innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #dc3545;">
+                    <div style="font-size: 18px; margin-bottom: 10px;"> Error</div>
+                    <div>${error.message}</div>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('editEstudianteModal')" style="margin-top: 15px;">
+                        Cerrar
+                    </button>
+                </div>
+            `;
+        });
+}
+
+function showInscripcion(estudianteId) {
+    fetch(`/admin/estudiantes/${estudianteId}/inscripcion`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error al cargar datos de inscripción');
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Datos recibidos:', data);
+            window.gradosData = data.grados;
+
+            const nombreCompleto = `${data.estudiante.nombres} ${data.estudiante.apellido_paterno} ${data.estudiante.apellido_materno || ''}`.trim();
+
+            let html = `
+                <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h4>Datos del Estudiante</h4>
+                    <p><strong>Nombre:</strong> ${nombreCompleto}</p>
+                    <p><strong>CI:</strong> ${data.estudiante.ci || 'No registrado'}</p>
+                    <p><strong>Código:</strong> ${data.estudiante.codigo_estudiante || 'No registrado'}</p>
+                </div>
+
+                <form id="inscripcionForm" onsubmit="inscribirEstudiante(event, ${estudianteId})">
+                    <div class="form-group">
+                        <label>Seleccionar Curso</label>
+                        <select id="gradoSelect" class="form-select" onchange="loadSecciones()" required>
+                            <option value="">Seleccionar curso</option>
+                            ${data.grados ? data.grados.map(g => `<option value="${g.id_grado}">${g.nombre}</option>`).join('') : ''}
+                        </select>
+                    </div>
+
+                    <div id="seccionesContainer" style="display: none; margin-top: 20px;">
+                        <h4>Paralelos Disponibles</h4>
+                        <div id="seccionesList"></div>
+                    </div>
+
+                    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e5e5;">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('inscripcionModal')">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Inscribir</button>
+                    </div>
+                </form>
+            `;
+
+            document.getElementById('inscripcionContent').innerHTML = html;
+            openModal('inscripcionModal');
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al cargar los datos de inscripción');
+        });
+}
+
+function loadSecciones() {
+    const gradoId = document.getElementById('gradoSelect').value;
+    if (!gradoId) {
+        document.getElementById('seccionesContainer').style.display = 'none';
+        return;
+    }
+
+    const grado = window.gradosData.find(g => g.id_grado == gradoId);
+    let html = '';
+
+    const fetchPromises = grado.secciones.map(seccion =>
+        fetch(`/admin/secciones/${seccion.id_seccion}/capacidad`)
+            .then(resp => resp.json())
+            .then(data => {
+                const lleno = data.disponible <= 0;
+                html += `
+                    <div style="padding: 15px; border: 1px solid #e5e5e5; border-radius: 8px; margin-bottom: 10px;">
+                        <label style="display: flex; align-items: center; cursor: ${lleno ? 'not-allowed' : 'pointer'};">
+                            <input type="radio" name="id_seccion" value="${seccion.id_seccion}" ${lleno ? 'disabled' : ''} required style="margin-right: 10px;">
+                            <div style="flex: 1;">
+                                <strong>Paralelo ${seccion.nombre}</strong>
+                                <p style="margin: 5px 0 0; font-size: 13px; color: #666;">
+                                    ${data.matriculados}/${data.capacidad_maxima} estudiantes
+                                    ${lleno ? '<span style="color: #ef4444; font-weight: 600;"> - PARALELO LLENO</span>' : ''}
+                                </p>
+                            </div>
+                        </label>
+                    </div>
+                `;
+            })
+    );
+
+    Promise.all(fetchPromises).then(() => {
+            <div style="color: #666; font-size: 16px;">Cargando datos del estudiante...</div>
+        </div>
+    `;
+    openModal('editEstudianteModal');
+    
+    fetch(`/admin/estudiantes/${id}/edit`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error al cargar los datos del estudiante');
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Datos recibidos:', data);
+            
+            document.getElementById('editEstudianteForm').action = `/admin/estudiantes/${id}`;
+            document.getElementById('editEstudianteContent').innerHTML = `
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Código Estudiante *</label>
+                        <input type="text" name="codigo_estudiante" value="${data.codigo_estudiante || ''}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>CI *</label>
+                        <input type="text" name="ci" value="${data.ci || ''}" required maxlength="15">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nombres *</label>
+                        <input type="text" name="nombres" value="${data.nombres || ''}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Apellido Paterno *</label>
+                        <input type="text" name="apellido_paterno" value="${data.apellido_paterno || ''}" required>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Apellido Materno</label>
+                        <input type="text" name="apellido_materno" value="${data.apellido_materno || ''}">
+                    </div>
+                    <div class="form-group">
+                        <label>Fecha de Nacimiento</label>
+                        <input type="date" name="fecha_nacimiento" value="${data.fecha_nacimiento || ''}">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Género *</label>
+                        <select name="genero" required>
+                            <option value="M" ${data.genero == 'M' ? 'selected' : ''}>Masculino</option>
+                            <option value="F" ${data.genero == 'F' ? 'selected' : ''}>Femenino</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Teléfono</label>
+                        <input type="text" name="telefono" value="${data.telefono || ''}">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Estado *</label>
+                        <select name="estado" required>
+                            <option value="1" ${data.estado == 1 ? 'selected' : ''}>Activo</option>
+                            <option value="0" ${data.estado == 0 ? 'selected' : ''}>Inactivo</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Dirección</label>
+                    <textarea name="direccion" rows="3">${data.direccion || ''}</textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>Nombre del Tutor</label>
+                    <input type="text" name="nombre_tutor" value="${data.nombre_tutor || ''}">
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Teléfono del Tutor</label>
+                        <input type="text" name="telefono_tutor" value="${data.telefono_tutor || ''}">
+                    </div>
+                    <div class="form-group">
+                        <label>Parentesco del Tutor</label>
+                        <input type="text" name="parentesco_tutor" value="${data.parentesco_tutor || ''}">
+                    </div>
+                </div>
+            `;
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('editEstudianteContent').innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #dc3545;">
+                    <div style="font-size: 18px; margin-bottom: 10px;"> Error</div>
+                    <div>${error.message}</div>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('editEstudianteModal')" style="margin-top: 15px;">
+                        Cerrar
+                    </button>
+                </div>
+            `;
+        });
+}
+
+function showInscripcion(estudianteId) {
+    fetch(`/admin/estudiantes/${estudianteId}/inscripcion`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error al cargar datos de inscripción');
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Datos recibidos:', data);
+            window.gradosData = data.grados;
+
+            const nombreCompleto = `${data.estudiante.nombres} ${data.estudiante.apellido_paterno} ${data.estudiante.apellido_materno || ''}`.trim();
+
+            let html = `
+                <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h4>Datos del Estudiante</h4>
+                    <p><strong>Nombre:</strong> ${nombreCompleto}</p>
+                    <p><strong>CI:</strong> ${data.estudiante.ci || 'No registrado'}</p>
+                    <p><strong>Código:</strong> ${data.estudiante.codigo_estudiante || 'No registrado'}</p>
+                </div>
+
+                <form id="inscripcionForm" onsubmit="inscribirEstudiante(event, ${estudianteId})">
+                    <div class="form-group">
+                        <label>Seleccionar Curso</label>
+                        <select id="gradoSelect" class="form-select" onchange="loadSecciones()" required>
+                            <option value="">Seleccionar curso</option>
+                            ${data.grados ? data.grados.map(g => `<option value="${g.id_grado}">${g.nombre}</option>`).join('') : ''}
+                        </select>
+                    </div>
+
+                    <div id="seccionesContainer" style="display: none; margin-top: 20px;">
+                        <h4>Paralelos Disponibles</h4>
+                        <div id="seccionesList"></div>
+                    </div>
+
+                    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e5e5;">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('inscripcionModal')">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Inscribir</button>
+                    </div>
+                </form>
+            `;
+
+            document.getElementById('inscripcionContent').innerHTML = html;
+            openModal('inscripcionModal');
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al cargar los datos de inscripción');
+        });
+}
+
+function loadSecciones() {
+    const gradoId = document.getElementById('gradoSelect').value;
+    if (!gradoId) {
+        document.getElementById('seccionesContainer').style.display = 'none';
+        return;
+    }
+
+    const grado = window.gradosData.find(g => g.id_grado == gradoId);
+    let html = '';
+
+    const fetchPromises = grado.secciones.map(seccion =>
+        fetch(`/admin/secciones/${seccion.id_seccion}/capacidad`)
+            .then(resp => resp.json())
+            .then(data => {
+                const lleno = data.disponible <= 0;
+                html += `
+                    <div style="padding: 15px; border: 1px solid #e5e5e5; border-radius: 8px; margin-bottom: 10px;">
+                        <label style="display: flex; align-items: center; cursor: ${lleno ? 'not-allowed' : 'pointer'};">
+                            <input type="radio" name="id_seccion" value="${seccion.id_seccion}" ${lleno ? 'disabled' : ''} required style="margin-right: 10px;">
+                            <div style="flex: 1;">
+                                <strong>Paralelo ${seccion.nombre}</strong>
+                                <p style="margin: 5px 0 0; font-size: 13px; color: #666;">
+                                    ${data.matriculados}/${data.capacidad_maxima} estudiantes
+                                    ${lleno ? '<span style="color: #ef4444; font-weight: 600;"> - PARALELO LLENO</span>' : ''}
+                                </p>
+                            </div>
+                        </label>
+                    </div>
+                `;
+            })
+    );
+
+    Promise.all(fetchPromises).then(() => {
+        document.getElementById('seccionesList').innerHTML = html;
+        document.getElementById('seccionesContainer').style.display = 'block';
+    });
+}
+
+function inscribirEstudiante(event, estudianteId) {
+    event.preventDefault();
+    const formData = new FormData(event.target);
+
+    fetch('/admin/estudiantes/inscribir', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': getCsrfToken()
+        },
+        body: JSON.stringify({
+            id_estudiante: estudianteId,
+            id_seccion: formData.get('id_seccion')
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            closeModal('inscripcionModal');
+            location.reload();
+        } else {
+            alert(data.message);
+        }
+    });
+}
+
+function showNotas(estudianteId) {
+    fetch(`/admin/estudiantes/${estudianteId}/notas`)
+        .then(resp => resp.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error);
+                return;
+            }
+            
+            const nombreCompleto = `${data.estudiante.nombres} ${data.estudiante.apellido_paterno} ${data.estudiante.apellido_materno || ''}`.trim();
+            
+            let html = `
+                <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h4>Estudiante: ${nombreCompleto}</h4>
+                    <p><strong>Código:</strong> ${data.estudiante.codigo_estudiante}</p>
+                </div>
+            `;
+
+            if (Object.keys(data.calificaciones).length > 0) {
+                Object.entries(data.calificaciones).forEach(([materia, notas]) => {
+                    html += `
+                        <div style="margin-bottom: 30px;">
+                            <h4 style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #000;">${materia}</h4>
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr>
+                                        <th style="padding: 10px; border: 1px solid #ddd;">Periodo</th>
+                                        <th style="padding: 10px; border: 1px solid #ddd;">Tipo</th>
+                                        <th style="padding: 10px; border: 1px solid #ddd;">Nota</th>
+                                        <th style="padding: 10px; border: 1px solid #ddd;">Fecha</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${notas.map(nota => `
+                                        <tr>
+                                            <td style="padding: 10px; border: 1px solid #ddd;">${nota.periodo.nombre}</td>
+                                            <td style="padding: 10px; border: 1px solid #ddd;">${nota.tipo_evaluacion}</td>
+                                            <td style="padding: 10px; border: 1px solid #ddd;"><strong>${nota.nota}</strong></td>
+                                            <td style="padding: 10px; border: 1px solid #ddd;">${nota.fecha_evaluacion}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>`;
+                });
+            } else {
+                html += '<p style="text-align:center; padding:40px; color:#666;">No hay calificaciones registradas</p>';
+            }
+
+            document.getElementById('notasContent').innerHTML = html;
+            openModal('notasModal');
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al cargar las notas');
+        });
+}
+
+function showAsistencia(estudianteId) {
+    fetch(`/admin/estudiantes/${estudianteId}/asistencia`)
+        .then(resp => resp.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error);
+                return;
+            }
+            
+            const nombreCompleto = `${data.estudiante.nombres} ${data.estudiante.apellido_paterno} ${data.estudiante.apellido_materno || ''}`.trim();
+            
+            let html = `<div style="background:#f9f9f9; padding:20px; border-radius:8px; margin-bottom:20px;">
+                <h4>Estudiante: ${nombreCompleto}</h4>
+                <p><strong>Código:</strong> ${data.estudiante.codigo_estudiante}</p>
+                </div>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr>
+                            <th style="padding: 10px; border: 1px solid #ddd;">Fecha</th>
+                            <th style="padding: 10px; border: 1px solid #ddd;">Materia</th>
+                            <th style="padding: 10px; border: 1px solid #ddd;">Estado</th>
+                            <th style="padding: 10px; border: 1px solid #ddd;">Observaciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+
+            if (data.asistencias.length > 0) {
+                data.asistencias.forEach(a => {
+                    const badge = a.estado == 'presente' ? 'badge-success' : a.estado == 'ausente' ? 'badge-danger' : 'badge-warning';
+                    html += `<tr>
+                        <td style="padding: 10px; border: 1px solid #ddd;">${a.fecha}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">${a.materia.nombre}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd;"><span class="badge ${badge}">${a.estado}</span></td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">${a.observaciones || '-'}</td>
+                    </tr>`;
+                });
+            } else {
+                html += '<tr><td colspan="4" style="text-align:center; padding:40px; color:#666;">No hay registros de asistencia</td></tr>';
+            }
+
+            html += '</tbody></table>';
+            document.getElementById('asistenciaContent').innerHTML = html;
+            openModal('asistenciaModal');
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al cargar la asistencia');
+        });
+}
+</script>
+@endpush
